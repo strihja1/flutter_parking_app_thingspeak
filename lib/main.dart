@@ -41,10 +41,10 @@ class _MyHomePageState extends State<MyHomePage> {
   final GlobalKey<ScaffoldState> scaffoldKey = new GlobalKey<ScaffoldState>();
   double sensorValue;
   bool isFree;
-  bool isUnknown;
   int count = 1;
   DateTime date = DateTime.now();
   SensorData sensorData;
+  Timer timer;
 
   Future fetchPost() async {
     final response = await http.get(
@@ -84,17 +84,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final stream = Stream.periodic(Duration(seconds: 30)).asyncMap((_) async {
-      _handleRefresh();
-      print("Refresh done");
-      return "API results";
-    });
+    if(timer != null){
+      timer.cancel();
+    }
+    timer = Timer.periodic(const Duration(seconds:10), (Timer t) => _handleRefresh());
     DateTime dateSince = DateTime.now();
     String lastUpdate;
     return Scaffold(
       key: scaffoldKey,
       body: StreamBuilder(
-              stream: stream,
+              stream: _postsController.stream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Text(snapshot.error);
@@ -102,11 +101,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 if(snapshot.hasData && !snapshot.hasError) {
                   sensorValue = num.tryParse(sensorData.feeds.last.sensorValue)?.toDouble();
                   isFree = sensorValue == 1 ? true : false;
-                  isUnknown = sensorValue == 0.5 ? true : false;
                   dateSince = (DateTime.parse(sensorData.feeds.last.date));
                     lastUpdate = dateTimeFormatToString(DateTime.now());
                   return Container(
-                    color: isUnknown ? Colors.yellow : isFree
+                    color: isFree == null ? Colors.yellow : isFree
                         ? Colors.green
                         : Colors.red,
                     child: Center(
@@ -141,7 +139,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                   style: TextStyle(fontSize: 18, color: Colors
                                       .white)),
                               onPressed: () {
-                                _handleRefresh();
+                            setState(() {
+                              _handleRefresh();
+                            });
                               })
                         ],
                       ),
@@ -150,16 +150,26 @@ class _MyHomePageState extends State<MyHomePage> {
                 }
 
                 else{
-                  return Center(child: RaisedButton(color: Colors.black,
-                      padding: EdgeInsets.symmetric(
-                          vertical: 16, horizontal: 30),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text("Načítám data ze serveru", style: TextStyle(fontSize: 20),),
+                      CircularProgressIndicator(),
+                      Center(child: RaisedButton(color: Colors.black,
+                          padding: EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 30),
 
-                      child: Text("Aktualizovat",
-                          style: TextStyle(fontSize: 18, color: Colors
-                              .white)),
-                      onPressed: () {
-                        _handleRefresh();
-                      }));
+                          child: Text("Aktualizovat",
+                              style: TextStyle(fontSize: 18, color: Colors
+                                  .white)),
+                          onPressed: () {
+                            setState(() {
+                              _handleRefresh();
+                            });
+                          })),
+                    ],
+                  );
                 }
               }
           )
