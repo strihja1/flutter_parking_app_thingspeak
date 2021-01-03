@@ -45,16 +45,33 @@ class _MyHomePageState extends State<MyHomePage> {
   DateTime date = DateTime.now();
   SensorData sensorData;
   Timer timer;
+  bool isError = false;
+  String errorText;
 
   Future fetchPost() async {
-    final response = await http.get(
-        'https://api.thingspeak.com/channels/1275616/fields/1.json?results=1');
-
-    if (response.statusCode == 200) {
-      sensorData = SensorData.fromJson(json.decode(response.body));
-      return (sensorData.feeds.last.date);
-    } else {
-      throw Exception('Failed to load post');
+    http.Response response;
+    try {
+      response = await http.get(
+            'https://api.thingspeak.com/channels/1275616/fields/1.json?results=1');
+    } on Exception catch (e) {
+      isError = true;
+      if(e.toString().contains("Failed host lookup:")){
+        errorText = "Není připojení k internetu - $e";
+      }else {
+        errorText = e.toString();
+      }
+    }
+    if (response != null) {
+      if (response.statusCode == 200) {
+        sensorData = SensorData.fromJson(json.decode(response.body));
+        isError = false;
+        return (sensorData.feeds.last.date);
+      } else {
+        isError = true;
+        throw Exception('Failed to load post');
+      }
+    }else{
+      isError = true;
     }
   }
 
@@ -68,7 +85,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<Null> _handleRefresh() async {
-    count++;
     fetchPost().then((res) async {
       _postsController.add(res);
       return null;
@@ -88,6 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
       timer.cancel();
     }
     timer = Timer.periodic(const Duration(seconds:10), (Timer t) => _handleRefresh());
+
     DateTime dateSince = DateTime.now();
     String lastUpdate;
     return Scaffold(
@@ -95,9 +112,6 @@ class _MyHomePageState extends State<MyHomePage> {
       body: StreamBuilder(
               stream: _postsController.stream,
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Text(snapshot.error);
-                }
                 if(snapshot.hasData && !snapshot.hasError) {
                   sensorValue = num.tryParse(sensorData.feeds.last.sensorValue)?.toDouble();
                   isFree = sensorValue == 1 ? true : false;
@@ -142,20 +156,26 @@ class _MyHomePageState extends State<MyHomePage> {
                             setState(() {
                               _handleRefresh();
                             });
-                              })
+                              }),
                         ],
                       ),
                     ),
                   );
                 }
-
                 else{
+                  final text = isError ? "Chyba při načítání dat. Zkontrolujte připojení k internetu." : "Načítám data ze serveru";
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      Text("Načítám data ze serveru", style: TextStyle(fontSize: 20),),
-                      CircularProgressIndicator(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Text(text, style: TextStyle(fontSize: 20),textAlign: TextAlign.center,),
+                      ),
+                      isError ? Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Text(errorText, textAlign: TextAlign.center,),
+                      ) : CircularProgressIndicator(),
                       Center(child: RaisedButton(color: Colors.black,
                           padding: EdgeInsets.symmetric(
                               vertical: 16, horizontal: 30),
