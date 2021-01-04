@@ -14,14 +14,14 @@ class SensorData {
 
 class Feed {
   final String date;
-  final String sensorValue;
+  final String distance;
 
-  Feed({this.date, this.sensorValue});
+  Feed({this.date, this.distance});
 
   factory Feed.fromJson(Map<String, dynamic> json) {
     return Feed(
       date: json['created_at'],
-      sensorValue:json['field1'],
+      distance:json['field1'],
     );
   }
 }

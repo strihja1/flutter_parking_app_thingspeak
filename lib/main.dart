@@ -39,7 +39,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   StreamController _postsController;
   final GlobalKey<ScaffoldState> scaffoldKey = new GlobalKey<ScaffoldState>();
-  double sensorValue;
+  double distance;
   bool isFree;
   int count = 1;
   DateTime date = DateTime.now();
@@ -113,8 +113,8 @@ class _MyHomePageState extends State<MyHomePage> {
               stream: _postsController.stream,
               builder: (context, snapshot) {
                 if(snapshot.hasData && !snapshot.hasError) {
-                  sensorValue = num.tryParse(sensorData.feeds.last.sensorValue)?.toDouble();
-                  isFree = sensorValue == 1 ? true : false;
+                  distance = num.tryParse(sensorData.feeds.last.distance)?.toDouble();
+                  isFree = distance < 150 ? true : false;
                   dateSince = (DateTime.parse(sensorData.feeds.last.date));
                     lastUpdate = dateTimeFormatToString(DateTime.now());
                   return Container(
@@ -135,11 +135,17 @@ class _MyHomePageState extends State<MyHomePage> {
                             style: TextStyle(fontSize: 40),
                             textAlign: TextAlign.center,
 
-                          ), Text(
+                          ),
+                          Text(
                             dateSince == null ? "" : 'Od: ${dateTimeFormatToString(
                                 dateSince)}',
                             style: TextStyle(fontSize: 40,),
                             textAlign: TextAlign.center,
+                          ), Text(
+                            "Vzdálenost: $distance cm",
+                            style: TextStyle(fontSize: 20),
+                            textAlign: TextAlign.center,
+
                           ), Text(
                               'Poslední aktualizace: $lastUpdate',
                               style: TextStyle(fontSize: 20),
