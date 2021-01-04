@@ -114,8 +114,8 @@ class _MyHomePageState extends State<MyHomePage> {
               builder: (context, snapshot) {
                 if(snapshot.hasData && !snapshot.hasError) {
                   distance = num.tryParse(sensorData.feeds.last.distance)?.toDouble();
-                  isFree = distance < 150 ? true : false;
-                  dateSince = (DateTime.parse(sensorData.feeds.last.date));
+                  isFree = distance > 250 ? true : false;
+                  dateSince = (DateTime.parse(sensorData.feeds.last.date).toLocal());
                     lastUpdate = dateTimeFormatToString(DateTime.now());
                   return Container(
                     color: isFree == null ? Colors.yellow : isFree
@@ -142,7 +142,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             style: TextStyle(fontSize: 40,),
                             textAlign: TextAlign.center,
                           ), Text(
-                            "Vzdálenost: $distance cm",
+                            "Vzdálenost tělesa: $distance cm",
                             style: TextStyle(fontSize: 20),
                             textAlign: TextAlign.center,
 
