@@ -39,7 +39,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   StreamController _postsController;
   final GlobalKey<ScaffoldState> scaffoldKey = new GlobalKey<ScaffoldState>();
-  double distance;
+  double distance = 0;
   bool isFree;
   int count = 1;
   DateTime date = DateTime.now();
@@ -47,6 +47,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Timer timer;
   bool isError = false;
   String errorText;
+  bool isSensorError = false;
+  DateTime dateSince = DateTime.now();
 
   Future fetchPost() async {
     http.Response response;
@@ -104,8 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
       timer.cancel();
     }
     timer = Timer.periodic(const Duration(seconds:10), (Timer t) => _handleRefresh());
-
-    DateTime dateSince = DateTime.now();
     String lastUpdate;
     return Scaffold(
       key: scaffoldKey,
@@ -113,9 +113,21 @@ class _MyHomePageState extends State<MyHomePage> {
               stream: _postsController.stream,
               builder: (context, snapshot) {
                 if(snapshot.hasData && !snapshot.hasError) {
+                  final oldDistance = distance;
                   distance = num.tryParse(sensorData.feeds.last.distance)?.toDouble();
                   isFree = distance > 250 ? true : false;
-                  dateSince = (DateTime.parse(sensorData.feeds.last.date).toLocal());
+                  DateTime changedAt = (DateTime.parse(sensorData.feeds.last.date).toLocal());
+                  if(oldDistance != distance){
+                    dateSince = changedAt;
+                  }
+                  if(dateSince.isAfter(changedAt)){
+                    dateSince = changedAt;
+                  }
+                  if(changedAt.isBefore(DateTime.now().subtract(Duration(minutes: 10)))){
+                    isSensorError = true;
+                  }else{
+                    isSensorError = false;
+                  }
                     lastUpdate = dateTimeFormatToString(DateTime.now());
                   return Container(
                     color: isFree == null ? Colors.yellow : isFree
@@ -135,8 +147,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             style: TextStyle(fontSize: 40),
                             textAlign: TextAlign.center,
 
-                          ),
-                          Text(
+                          ), Text(
                             dateSince == null ? "" : 'Od: ${dateTimeFormatToString(
                                 dateSince)}',
                             style: TextStyle(fontSize: 40,),
@@ -146,7 +157,16 @@ class _MyHomePageState extends State<MyHomePage> {
                             style: TextStyle(fontSize: 20),
                             textAlign: TextAlign.center,
 
-                          ), Text(
+                          ), isSensorError ?
+                          Container(
+                            color: Colors.amber,
+                            child: Text(
+                              "Od ${dateTimeFormatToString(changedAt)} nepřišla od senzoru žádná zpráva",
+                              style: TextStyle(fontSize: 14),
+                              textAlign: TextAlign.center,
+
+                            ),
+                          ) : SizedBox.shrink(),Text(
                               'Poslední aktualizace: $lastUpdate',
                               style: TextStyle(fontSize: 20),
                               textAlign: TextAlign.center
@@ -203,6 +223,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   String dateTimeFormatToString(DateTime dateTime) =>
-      DateFormat("HH:mm:ss dd-MM-yyyy ").format(dateTime);
+      DateFormat("HH:mm:ss dd-MM-yyyy").format(dateTime);
 }
 
